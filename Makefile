@@ -1,17 +1,17 @@
 CC=gcc
-CFLAGS=-g -Wall -std=c99
+CFLAGS=-g -Wall -std=gnu99
 OUT=sysfdtbl.out
-OBJ=main.o
+OBJ=main.o fileDesc.o misc.o
 RARGS=
 
-build: $(OBJ)
+$(OUT): $(OBJ)
 	$(CC) $+ -o $(OUT)
 
-run: build
-	./$(OUT) $(RARGS)
+run: $(OUT)
+	@./$(OUT) $(RARGS)
 
-%.o: %.c
+%.o: %.c *.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm $(OBJ)
+	rm $(OBJ) $(OUT)
