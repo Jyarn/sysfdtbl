@@ -1,0 +1,20 @@
+Eesign Goals:
+ Modularity
+ No memory leaks (i.e no malloc)
+
+CMD proc
+ --threshold
+ --per-process
+ --Vnodes
+ --composite
+ modularize cmd proc for future and siern?
+ pos arg
+
+Print table
+ --per-process
+ --Vnodes
+ --composite
+
+Reduce memory usage
+
+

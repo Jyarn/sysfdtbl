@@ -1,10 +1,16 @@
 #ifndef __FILEDESC__
 #define __FILEDESC__
 
-#define FSYM_STT (char)1
-#define FPHY_STT (char)(1 << 1)
-#define FRDL_STT (char)(1 << 2)
+typedef struct s_fdDsc {
+// linked list of file description descriptions
+    char              fName[2048];
+    unsigned long int symNode;
+    unsigned long int phyNode;
+    struct s_fdDsc*   next;
+    unsigned int      pid;
+    unsigned int      fd;
+} fdDsc;
 
-int fetchProc ();
+fdDsc* fetchProc (int thresh);
 
 #endif
