@@ -2,15 +2,21 @@
 #define __FILEDESC__
 
 typedef struct s_fdDsc {
-// linked list of file description descriptions
+// file descriptor descriptor
     char              fName[2048];
     unsigned long int symNode;
     unsigned long int phyNode;
-    struct s_fdDsc*   next;
-    unsigned int      pid;
     unsigned int      fd;
 } fdDsc;
 
-fdDsc* fetchProc (int thresh);
+typedef struct s_pidFdDsc {
+// group all fdDscs by pid and store their sizes
+    int    sz;
+    int    pid;
+    fdDsc* fds;
+} pidFdDsc;
+
+
+int fetchProc (pidFdDsc** bff);
 
 #endif

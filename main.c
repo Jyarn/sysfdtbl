@@ -3,17 +3,19 @@
 #include <stdlib.h>
 #include "fileDesc.h"
 
-void printINFO (fdDsc* t) {
-    if (t) {
-        printf(
-            "PID: %d\nFD: %d\n S_IN: %ld\nP_IN: %ld\nFNM: %s\n\n",
-            t->pid, t->fd, t->symNode, t->phyNode, t->fName
-        );
-        printINFO(t->next);
-        free(t);
+void printINFO (int sz, pidFdDsc* t) {
+    for (int i = 0; i < sz; i++) {
+        if (t[i].sz != -1) {
+            printf("PID: %d\n+----------------+\n", t[i].pid);
+            for (int j = 0; j < t[i].sz; j++) {
+                printf("FD: %d\nS_IN: %ld\nP_IN: %ld\nFNM: %s\n\n", t[i].fds[j].fd, t[i].fds[j].symNode, t[i].fds[j].phyNode, t[i].fds[j].fName);
+            }
+        }
     }
 }
 
 int main () {
-    printINFO(fetchProc(0));
+    pidFdDsc* r;
+    int sz = fetchProc(0, &r);
+    printINFO(sz, r);
 }

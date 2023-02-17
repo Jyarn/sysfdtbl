@@ -1,4 +1,4 @@
-Eesign Goals:
+Design Goals:
  Modularity
  No memory leaks (i.e no malloc)
 
