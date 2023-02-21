@@ -8,7 +8,10 @@ $(OUT): $(OBJ)
 	$(CC) $+ -o $(OUT)
 
 run: $(OUT)
-	@./$(OUT) $(RARGS)
+	./$(OUT) $(RARGS)
+
+gdb: $(OUT)
+	gdb --args $(OUT) $(RARGS)
 
 %.o: %.c *.h
 	$(CC) $(CFLAGS) -c $< -o $@

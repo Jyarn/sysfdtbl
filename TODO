@@ -12,6 +12,7 @@ CMD proc
 
 Print table
  --per-process
+ --systemWide
  --Vnodes
  --composite
 

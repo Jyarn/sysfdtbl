@@ -62,11 +62,11 @@ int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
         }
     }
 
-
+    closedir(pDir);
     return c;
 }
 
-int fetchProc (pidFdDsc** bff) {
+int fetchAll (pidFdDsc** bff) {
 /*
  * Main loop to be moved to main.c
  * Handle --threshold flag
@@ -79,17 +79,52 @@ int fetchProc (pidFdDsc** bff) {
     if (retSz == -1) { return -1; }
     *bff = malloc(retSz * sizeof(pidFdDsc));
 
+    struct stat uCheck;
+    uid_t currentUser = geteuid();
 
     for (struct dirent* d = readdir(proc); d; d = readdir(proc)) {
         if (isNum(d->d_name)) { // uints are at most 20 chars
+            
             char path[2048]; // 6 + 20 + 3 = 29 < 32 so it probably hopefully won't overflow
-            sprintf(path, "/proc/%s/fd/", d->d_name);
+            sprintf(path, "/proc/%s/", d->d_name);
+            stat(path, &uCheck);
 
+            if (uCheck.st_uid != currentUser) {
+                (*bff+c)->sz = -1;
+                c++;
+                continue;    
+            }
+
+            strncat(path, "fd/", 2048-strlen(path));
             (*bff+c)->sz = frPidPathFtFdInfo(path, &((*bff+c)->fds));
             (*bff+c)->pid = strtol(d->d_name, NULL, 10);
-            c++;
+            c++;    
         }
     }
 
+    closedir(proc);
     return c;
+}
+
+pidFdDsc* fetchSingle (int pid) {
+    if (pid <= 0) {
+        pid = getpid();
+    }
+
+    pidFdDsc* ret = malloc(1 * sizeof(pidFdDsc) );
+    char path[2048];
+    sprintf(path, "/proc/%d/fd/", pid);
+    ret->sz = frPidPathFtFdInfo(path, &(ret->fds));
+    ret->pid = pid;
+    return ret;
+}
+
+void destroyPidFdDsc (int sz, pidFdDsc* target) {
+    for (int i = 0; i < sz; i++) {
+        if (target[i].sz != -1) {
+            free(target[i].fds);
+        }
+    }
+    
+    free(target);
 }

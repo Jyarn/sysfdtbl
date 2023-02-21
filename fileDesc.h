@@ -17,6 +17,8 @@ typedef struct s_pidFdDsc {
 } pidFdDsc;
 
 
-int fetchProc (pidFdDsc** bff);
+int fetchAll (pidFdDsc** bff);
+pidFdDsc* fetchSingle (int pid);
+void destroyPidFdDsc (int sz, pidFdDsc* target);
 
 #endif
