@@ -10,6 +10,7 @@
 #include "misc.h"
 #include "fileDesc.h"
 
+
 int getDirSz (DIR** dir) {
     int c = 0;
     struct dirent* d;
@@ -27,8 +28,8 @@ void fetchStats (char* path, fdDsc* ret) { // probably going to delete so code q
     lstat(path, &buf);
     ret->phyNode = buf.st_ino;
 
-    readlink(path, ret->fName, 2047);
-    ret->fName[2047] = '\0';
+    int r = readlink(path, ret->fName, 2047);
+    ret->fName[r] = '\0';
 }
 
 int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
@@ -41,7 +42,7 @@ int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
     errno = 0;
     DIR* pDir = opendir(pidPath); // process directory
     if (errno) {
-        fprintf(stderr, "ERROR (%s): %s\n", pidPath, strerror(errno));
+        //fprintf(stderr, "ERROR (%s): %s\n", pidPath, strerror(errno));
         return -1;
     }
 
@@ -66,44 +67,37 @@ int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
     return c;
 }
 
-int fetchAll (pidFdDsc** bff) {
+pidFdDsc* fetchAll (uid_t user, char printall) {
 /*
  * Main loop to be moved to main.c
  * Handle --threshold flag
 */
-    int c = 0;
-
     DIR* proc = opendir("/proc");
-    
-    int retSz = getDirSz(&proc);
-    if (retSz == -1) { return -1; }
-    *bff = malloc(retSz * sizeof(pidFdDsc));
-
     struct stat uCheck;
-    uid_t currentUser = geteuid();
+
+    pidFdDsc* HEAD = NULL;
+    pidFdDsc** write = &HEAD;
 
     for (struct dirent* d = readdir(proc); d; d = readdir(proc)) {
         if (isNum(d->d_name)) { // uints are at most 20 chars
-            
             char path[2048]; // 6 + 20 + 3 = 29 < 32 so it probably hopefully won't overflow
             sprintf(path, "/proc/%s/", d->d_name);
             stat(path, &uCheck);
 
-            if (uCheck.st_uid != currentUser) {
-                (*bff+c)->sz = -1;
-                c++;
-                continue;    
+            if (printall || uCheck.st_uid == user) {
+                strncat(path, "fd/", 2048-strlen(path));
+                *write = malloc(sizeof(pidFdDsc) );
+                (*write)->fds = NULL;
+                (*write)->sz = frPidPathFtFdInfo(path, &(*write)->fds );
+                (*write)->pid = strtol(d->d_name, NULL, 10);
+                (*write)->next = NULL;
+                write = &(*write)->next;
             }
-
-            strncat(path, "fd/", 2048-strlen(path));
-            (*bff+c)->sz = frPidPathFtFdInfo(path, &((*bff+c)->fds));
-            (*bff+c)->pid = strtol(d->d_name, NULL, 10);
-            c++;    
         }
     }
 
     closedir(proc);
-    return c;
+    return HEAD;
 }
 
 pidFdDsc* fetchSingle (int pid) {
@@ -116,15 +110,14 @@ pidFdDsc* fetchSingle (int pid) {
     sprintf(path, "/proc/%d/fd/", pid);
     ret->sz = frPidPathFtFdInfo(path, &(ret->fds));
     ret->pid = pid;
+    ret->next = NULL;
     return ret;
 }
 
-void destroyPidFdDsc (int sz, pidFdDsc* target) {
-    for (int i = 0; i < sz; i++) {
-        if (target[i].sz != -1) {
-            free(target[i].fds);
-        }
+void destroyPidFdDsc (pidFdDsc* target) {
+    if (target != NULL) {
+        free(target->fds);
+        destroyPidFdDsc(target->next);
+        free(target);
     }
-    
-    free(target);
 }
