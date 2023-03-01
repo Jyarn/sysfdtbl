@@ -6,6 +6,7 @@
 
 #include "fileDesc.h"
 #include "misc.h"
+#include "IOman.h"
 
 #define PRINT_INODES (1 << 0) // print inodes
 #define PRINT_FLNAME (1 << 1) // print filename
@@ -13,31 +14,33 @@
 #define PRINT_PROCID (1 << 3) // print process id
 #define PRINT_LNNUMS (1 << 4) // print line numbers
 
-void printTable (pidFdDsc* in, char flags) {
+
+
+void printTable (pidFdDsc* in, char flags, printMode outputMode) {
     if (flags == 0) { return; }
 
     int titleBarLen = 0;
-    printf("%-10s", " ");
-    if (flags & PRINT_PROCID) { titleBarLen += printf("%-10s", "PID"); }
-    if (flags & PRINT_FLDESC) { titleBarLen += printf("%-6s", "FD"); }
-    if (flags & PRINT_INODES) { titleBarLen += printf("%-20s", "Inode"); }
-    if (flags & PRINT_FLNAME) { titleBarLen += printf("%-50s", "Filename"); }
+    printOut(outputMode, "%-10s", " ");
+    if (flags & PRINT_PROCID) { titleBarLen += printOut(outputMode, "%-10s", "PID"); }
+    if (flags & PRINT_FLDESC) { titleBarLen += printOut(outputMode, "%-6s", "FD"); }
+    if (flags & PRINT_INODES) { titleBarLen += printOut(outputMode, "%-20s", "Inode"); }
+    if (flags & PRINT_FLNAME) { titleBarLen += printOut(outputMode, "%-50s", "Filename"); }
 
-    printf("\n%8c", ' ');
-    for (int i = 8; i < titleBarLen+10; i++) { printf("="); }
+    printOut(outputMode, "\n%8c", ' ');
+    for (int i = 8; i < titleBarLen+10; i++) { printOut(outputMode, "="); }
     int line = 1;
 
     while (in) {
         if (in->sz != -1) {
             for (int i = 0; i < in->sz; i++) {
-                printf("\n");
-                if (flags & PRINT_LNNUMS) { printf("%-10d", line); }
-                else { printf("%10s", " "); }
+                printOut(outputMode, "\n");
+                if (flags & PRINT_LNNUMS) { printOut(outputMode, "%-10d", line); }
+                else { printOut(outputMode, "%10s", " "); }
 
-                if (flags & PRINT_PROCID) { printf("%-10d", in->pid); }
-                if (flags & PRINT_FLDESC) { printf("%-6d", in->fds[i].fd); }
-                if (flags & PRINT_INODES) { printf("%-20ld", in->fds[i].symNode); }
-                if (flags & PRINT_FLNAME) { printf("%-50s", in->fds[i].fName); }
+                if (flags & PRINT_PROCID) { printOut(outputMode, "%-10d", in->pid); }
+                if (flags & PRINT_FLDESC) { printOut(outputMode, "%-6d", in->fds[i].fd); }
+                if (flags & PRINT_INODES) { printOut(outputMode, "%-20ld", in->fds[i].symNode); }
+                if (flags & PRINT_FLNAME) { printOut(outputMode, "%-50s", in->fds[i].fName); }
                 line++;
             }
         }
@@ -46,20 +49,20 @@ void printTable (pidFdDsc* in, char flags) {
         in = in->next;
     }
 
-    printf("\n%8c", ' ');
-    for (int i = 8; i < titleBarLen+10; i++) { printf("="); }
-    printf("\n\n\n");
+    printOut(outputMode, "\n%8c", ' ');
+    for (int i = 8; i < titleBarLen+10; i++) { printOut(outputMode, "="); }
+    printOut(outputMode, "\n\n\n");
 }
 
-void printThresh (pidFdDsc* in, int threshold) {
+void printThresh (printMode outputMode, pidFdDsc* in, int threshold) {
     int c = 0;
 
-    printf("## Offending processes:");
+    printOut(outputMode, "## Offending processes:");
     while (in) {
         if (in->sz != -1 && in->sz > threshold) {
-            if (c % 10 == 0) { printf("\n"); }
-            if (c % 10 != 0) { printf(", "); }
-            printf("%d (%d)", in->pid, in->sz);
+            if (c % 10 == 0) { printOut(outputMode, "\n"); }
+            if (c % 10 != 0) { printOut(outputMode, ", "); }
+            printOut(outputMode, "%d (%d)", in->pid, in->sz);
             c++;
         }
 
@@ -74,13 +77,15 @@ int main (int argc, char** argv) {
 
     const char composite = PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME | PRINT_INODES;
     const char sysWide   = PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME;
-    const char vnodes    = PRINT_INODES;
+    const char vnodes    = PRINT_PROCID | PRINT_FLDESC | PRINT_INODES;
     const char perProc   = PRINT_PROCID | PRINT_FLDESC;
 
     char printThreshold = 0;
     int threshold = 0;
     char printUsr = PRINT_LNNUMS;
     pid_t pid     = 0;
+
+    printMode outputMode = p_stdout;
 
     tableQueue[0] = composite;
 
@@ -89,6 +94,9 @@ int main (int argc, char** argv) {
         else if ( !strcmp(argv[i], "--systemWide")) { tableQueue[qHead++] = sysWide; }
         else if ( !strcmp(argv[i], "--Vnodes")) { tableQueue[qHead++] = vnodes; }
         else if ( !strcmp(argv[i], "--composite")) { tableQueue[qHead++] = composite; }
+        else if ( !strcmp(argv[i], "--output_TXT")) { outputMode = p_text; }
+        else if ( !strcmp(argv[i], "--output_binary")) { outputMode = p_binary; }
+
         else if ( !strncmp(argv[i], "--threshold", 11)) {
             int off = 11;
             int argOff = i;
@@ -122,12 +130,12 @@ int main (int argc, char** argv) {
     pidFdDsc* r = NULL;
     if (printUsr) {
         struct passwd* p = getpwuid(geteuid() );
-        printf(" >>> TARGETING USER: %s\n", p->pw_name);
+        printOut(outputMode, " >>> TARGETING USER: %s\n", p->pw_name);
         r = fetchAll(geteuid(), 0);
     }
     else {
-        if (pid == -1) { printf(" >>> TARGETING SELF\n"); }
-        else { printf(" >>> TARGETING PID: %d\n", pid);}
+        if (pid == -1) { printOut(outputMode, " >>> TARGETING SELF\n"); }
+        else { printOut(outputMode, " >>> TARGETING PID: %d\n", pid);}
         r = fetchSingle(pid);
     }
 
@@ -135,33 +143,33 @@ int main (int argc, char** argv) {
     for (int i = 0; i < a; i++) { // why doesn't my sanity reduce to an integer constant
         switch (tableQueue[i]) {
          case PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME | PRINT_INODES:
-            printf("composite\n");
+            printOut(outputMode, "composite\n");
             break;
 
          case PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME:
-            printf("sysWide\n");
+            printOut(outputMode, "sysWide\n");
             break;
 
-         case PRINT_INODES:
-            printf("vnodes\n");
+         case PRINT_PROCID | PRINT_FLDESC | PRINT_INODES:
+            printOut(outputMode, "vnodes\n");
             break;
 
          case PRINT_PROCID | PRINT_FLDESC:
-            printf("perProc\n");
+            printOut(outputMode, "perProc\n");
             break;
         }
     }
 
     a = qHead ? qHead : 1;
     for (int i = 0; i < a; i++) {
-        printTable(r, tableQueue[i] | printUsr);
+        printTable(r, tableQueue[i] | printUsr, 0);
     }
 
     if (printThreshold) {
-        printf("threshold = %d\n", threshold);
-        printThresh(r, threshold);
+        printOut(outputMode, "threshold = %d\n", threshold);
+        printThresh(outputMode, r, threshold);
     }
-    else { printf("No Threshold\n"); }
+    else { printOut(outputMode, "No Threshold\n"); }
 
     destroyPidFdDsc(r);
 }

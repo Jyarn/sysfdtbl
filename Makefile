@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g -Wall -std=gnu99
 OUT=sysfdtbl.out
-OBJ=main.o fileDesc.o misc.o
+OBJ=main.o fileDesc.o misc.o IOman.o
 RARGS=
 
 $(OUT): $(OBJ)
