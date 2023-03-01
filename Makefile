@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g -Wall -std=gnu99
 OUT=sysfdtbl.out
-OBJ=main.o fileDesc.o misc.o IOman.o
+OBJ=main.o fileDesc.o misc.o IO.o
 RARGS=
 
 $(OUT): $(OBJ)
@@ -17,6 +17,9 @@ gdb: $(OUT)
 vl: $(OUT)
 	valgrind --leak-check=full --track-origins=yes -s ./$(OUT) $(RARGS)
 
+test: $(OUT)
+	rm compositeTable.*
+	./test.sh
 
 %.o: %.c *.h
 	$(CC) $(CFLAGS) -c $< -o $@

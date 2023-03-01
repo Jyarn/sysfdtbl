@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "IOman.h"
+#include "IO.h"
 
 
 #define BIN_FLN "compositeTable.bin"
@@ -16,15 +16,15 @@ int printOut(printMode mode, const char* format, ...) {
     int len;
 
     if (mode == p_stdout || mode == p_text) {
-        if (mode == p_text) { txtOut = fopen(TXT_FLN, "a"); }
+        if (mode == p_text) { txtOut = fopen(TXT_FLN, "ab"); }
         len = vfprintf(txtOut, format, args);
     }
     else if (mode == p_binary) {
-        txtOut = fopen(BIN_FLN, "a");
+        txtOut = fopen(BIN_FLN, "ab");
 
         char bff[2048];
         len = vsprintf(bff, format, args);
-        fwrite(bff, sizeof(char), len+1, txtOut);
+        fwrite(bff, sizeof(char), len, txtOut);
     }
 
     if (txtOut != stdout) { fclose(txtOut); }

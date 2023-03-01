@@ -6,7 +6,7 @@
 
 #include "fileDesc.h"
 #include "misc.h"
-#include "IOman.h"
+#include "IO.h"
 
 #define PRINT_INODES (1 << 0) // print inodes
 #define PRINT_FLNAME (1 << 1) // print filename
@@ -22,7 +22,7 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode) {
     int titleBarLen = 0;
     printOut(outputMode, "%-10s", " ");
     if (flags & PRINT_PROCID) { titleBarLen += printOut(outputMode, "%-10s", "PID"); }
-    if (flags & PRINT_FLDESC) { titleBarLen += printOut(outputMode, "%-6s", "FD"); }
+    if (flags & PRINT_FLDESC) { titleBarLen += printOut(outputMode, "%-20s", "FD"); }
     if (flags & PRINT_INODES) { titleBarLen += printOut(outputMode, "%-20s", "Inode"); }
     if (flags & PRINT_FLNAME) { titleBarLen += printOut(outputMode, "%-50s", "Filename"); }
 
@@ -38,7 +38,7 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode) {
                 else { printOut(outputMode, "%10s", " "); }
 
                 if (flags & PRINT_PROCID) { printOut(outputMode, "%-10d", in->pid); }
-                if (flags & PRINT_FLDESC) { printOut(outputMode, "%-6d", in->fds[i].fd); }
+                if (flags & PRINT_FLDESC) { printOut(outputMode, "%-20d", in->fds[i].fd); }
                 if (flags & PRINT_INODES) { printOut(outputMode, "%-20ld", in->fds[i].symNode); }
                 if (flags & PRINT_FLNAME) { printOut(outputMode, "%-50s", in->fds[i].fName); }
                 line++;
@@ -85,7 +85,8 @@ int main (int argc, char** argv) {
     char printUsr = PRINT_LNNUMS;
     pid_t pid     = 0;
 
-    printMode outputMode = p_stdout;
+    char printTxt = 0;
+    char printBin = 0;
 
     tableQueue[0] = composite;
 
@@ -94,8 +95,8 @@ int main (int argc, char** argv) {
         else if ( !strcmp(argv[i], "--systemWide")) { tableQueue[qHead++] = sysWide; }
         else if ( !strcmp(argv[i], "--Vnodes")) { tableQueue[qHead++] = vnodes; }
         else if ( !strcmp(argv[i], "--composite")) { tableQueue[qHead++] = composite; }
-        else if ( !strcmp(argv[i], "--output_TXT")) { outputMode = p_text; }
-        else if ( !strcmp(argv[i], "--output_binary")) { outputMode = p_binary; }
+        else if ( !strcmp(argv[i], "--output_TXT")) { printTxt = 1; }
+        else if ( !strcmp(argv[i], "--output_binary")) { printBin = 1; }
 
         else if ( !strncmp(argv[i], "--threshold", 11)) {
             int off = 11;
@@ -118,7 +119,7 @@ int main (int argc, char** argv) {
         }
     }
 
-    if (isNum(argv[argc-1])) {
+    if (isNum(argv[argc-1]) || (argv[argc-1][0] == '-' && isNum(&argv[argc-1][1]))) {
         printUsr = 0;
         pid = strtol(argv[argc-1], NULL, 10);
     }
@@ -130,46 +131,33 @@ int main (int argc, char** argv) {
     pidFdDsc* r = NULL;
     if (printUsr) {
         struct passwd* p = getpwuid(geteuid() );
-        printOut(outputMode, " >>> TARGETING USER: %s\n", p->pw_name);
+        printOut(p_stdout, " >>> TARGETING USER: %s\n", p->pw_name);
         r = fetchAll(geteuid(), 0);
     }
     else {
-        if (pid == -1) { printOut(outputMode, " >>> TARGETING SELF\n"); }
-        else { printOut(outputMode, " >>> TARGETING PID: %d\n", pid);}
+        if (pid  <= 0) { printOut(p_stdout, " >>> TARGETING SELF\n"); }
+        else { printOut(p_stdout, " >>> TARGETING PID: %d\n", pid);}
         r = fetchSingle(pid);
     }
 
     int a = qHead ? qHead : 1;
-    for (int i = 0; i < a; i++) { // why doesn't my sanity reduce to an integer constant
-        switch (tableQueue[i]) {
-         case PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME | PRINT_INODES:
-            printOut(outputMode, "composite\n");
-            break;
-
-         case PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME:
-            printOut(outputMode, "sysWide\n");
-            break;
-
-         case PRINT_PROCID | PRINT_FLDESC | PRINT_INODES:
-            printOut(outputMode, "vnodes\n");
-            break;
-
-         case PRINT_PROCID | PRINT_FLDESC:
-            printOut(outputMode, "perProc\n");
-            break;
-        }
-    }
-
-    a = qHead ? qHead : 1;
     for (int i = 0; i < a; i++) {
         printTable(r, tableQueue[i] | printUsr, 0);
     }
 
     if (printThreshold) {
-        printOut(outputMode, "threshold = %d\n", threshold);
-        printThresh(outputMode, r, threshold);
+        printThresh(p_stdout, r, threshold);
     }
-    else { printOut(outputMode, "No Threshold\n"); }
+    else { printOut(p_stdout, "No Threshold\n"); }
+
+    if (printTxt) {
+        fileInit(p_text);
+        printTable(r, composite, p_text);
+    }
+    if (printBin) {
+        fileInit(p_binary);
+        printTable(r, composite, p_binary);
+    }
 
     destroyPidFdDsc(r);
 }
