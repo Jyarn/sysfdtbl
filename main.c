@@ -16,31 +16,31 @@
 
 
 
-void printTable (pidFdDsc* in, char flags, printMode outputMode) {
+void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
     if (flags == 0) { return; }
 
     int titleBarLen = 0;
-    printOut(outputMode, "%-10s", " ");
-    if (flags & PRINT_PROCID) { titleBarLen += printOut(outputMode, "%-10s", "PID"); }
-    if (flags & PRINT_FLDESC) { titleBarLen += printOut(outputMode, "%-20s", "FD"); }
-    if (flags & PRINT_INODES) { titleBarLen += printOut(outputMode, "%-20s", "Inode"); }
-    if (flags & PRINT_FLNAME) { titleBarLen += printOut(outputMode, "%-50s", "Filename"); }
+    printOut(stream, outputMode, "%-10s", " ");
+    if (flags & PRINT_PROCID) { titleBarLen += printOut(stream, outputMode, "%-10s", "PID"); }
+    if (flags & PRINT_FLDESC) { titleBarLen += printOut(stream, outputMode, "%-20s", "FD"); }
+    if (flags & PRINT_INODES) { titleBarLen += printOut(stream, outputMode, "%-20s", "Inode"); }
+    if (flags & PRINT_FLNAME) { titleBarLen += printOut(stream, outputMode, "%-50s", "Filename"); }
 
-    printOut(outputMode, "\n%8c", ' ');
-    for (int i = 8; i < titleBarLen+10; i++) { printOut(outputMode, "="); }
+    printOut(stream, outputMode, "\n%8c", ' ');
+    for (int i = 8; i < titleBarLen+10; i++) { printOut(stream, outputMode, "="); }
     int line = 1;
 
     while (in) {
         if (in->sz != -1) {
             for (int i = 0; i < in->sz; i++) {
-                printOut(outputMode, "\n");
-                if (flags & PRINT_LNNUMS) { printOut(outputMode, "%-10d", line); }
-                else { printOut(outputMode, "%10s", " "); }
+                printOut(stream, outputMode, "\n");
+                if (flags & PRINT_LNNUMS) { printOut(stream, outputMode, "%-10d", line); }
+                else { printOut(stream, outputMode, "%10s", " "); }
 
-                if (flags & PRINT_PROCID) { printOut(outputMode, "%-10d", in->pid); }
-                if (flags & PRINT_FLDESC) { printOut(outputMode, "%-20d", in->fds[i].fd); }
-                if (flags & PRINT_INODES) { printOut(outputMode, "%-20ld", in->fds[i].symNode); }
-                if (flags & PRINT_FLNAME) { printOut(outputMode, "%-50s", in->fds[i].fName); }
+                if (flags & PRINT_PROCID) { printOut(stream, outputMode, "%-10d", in->pid); }
+                if (flags & PRINT_FLDESC) { printOut(stream, outputMode, "%-20d", in->fds[i].fd); }
+                if (flags & PRINT_INODES) { printOut(stream, outputMode, "%-20ld", in->fds[i].symNode); }
+                if (flags & PRINT_FLNAME) { printOut(stream, outputMode, "%-50s", in->fds[i].fName); }
                 line++;
             }
         }
@@ -49,20 +49,20 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode) {
         in = in->next;
     }
 
-    printOut(outputMode, "\n%8c", ' ');
-    for (int i = 8; i < titleBarLen+10; i++) { printOut(outputMode, "="); }
-    printOut(outputMode, "\n\n\n");
+    printOut(stream, outputMode, "\n%8c", ' ');
+    for (int i = 8; i < titleBarLen+10; i++) { printOut(stream, outputMode, "="); }
+    printOut(stream, outputMode, "\n\n");
 }
 
-void printThresh (printMode outputMode, pidFdDsc* in, int threshold) {
+void printThresh (FILE* stream, printMode outputMode, pidFdDsc* in, int threshold) {
     int c = 0;
 
-    printOut(outputMode, "## Offending processes:");
+    printOut(stream, outputMode, "## Offending processes:");
     while (in) {
         if (in->sz != -1 && in->sz > threshold) {
-            if (c % 10 == 0) { printOut(outputMode, "\n"); }
-            if (c % 10 != 0) { printOut(outputMode, ", "); }
-            printOut(outputMode, "%d (%d)", in->pid, in->sz);
+            if (c % 10 == 0) { printOut(stream, outputMode, "\n"); }
+            if (c % 10 != 0) { printOut(stream, outputMode, ", "); }
+            printOut(stream, outputMode, "%d (%d)", in->pid, in->sz);
             c++;
         }
 
@@ -97,6 +97,7 @@ int main (int argc, char** argv) {
         else if ( !strcmp(argv[i], "--composite")) { tableQueue[qHead++] = composite; }
         else if ( !strcmp(argv[i], "--output_TXT")) { printTxt = 1; }
         else if ( !strcmp(argv[i], "--output_binary")) { printBin = 1; }
+        else if ( !strcmp(argv[i], "--notbl")) { qHead = -1; }
 
         else if ( !strncmp(argv[i], "--threshold", 11)) {
             int off = 11;
@@ -131,32 +132,34 @@ int main (int argc, char** argv) {
     pidFdDsc* r = NULL;
     if (printUsr) {
         struct passwd* p = getpwuid(geteuid() );
-        printOut(p_stdout, " >>> TARGETING USER: %s\n", p->pw_name);
+        printOut(stdout, p_stdout, " >>> TARGETING USER: %s\n", p->pw_name);
         r = fetchAll(geteuid(), 0);
     }
     else {
-        if (pid  <= 0) { printOut(p_stdout, " >>> TARGETING SELF\n"); }
-        else { printOut(p_stdout, " >>> TARGETING PID: %d\n", pid);}
+        if (pid  <= 0) { printOut(stdout, p_stdout, " >>> TARGETING SELF\n"); }
+        else { printOut(stdout, p_stdout, " >>> TARGETING PID: %d\n", pid);}
         r = fetchSingle(pid);
     }
 
     int a = qHead ? qHead : 1;
     for (int i = 0; i < a; i++) {
-        printTable(r, tableQueue[i] | printUsr, 0);
+        printTable(r, tableQueue[i] | printUsr, p_stdout, stdout);
     }
 
     if (printThreshold) {
-        printThresh(p_stdout, r, threshold);
+        printThresh(stdout, p_stdout, r, threshold);
     }
-    else { printOut(p_stdout, "No Threshold\n"); }
+    else { printOut(stdout, p_stdout, "No Threshold\n"); }
 
     if (printTxt) {
-        fileInit(p_text);
-        printTable(r, composite, p_text);
+        FILE* txtOut = fopen(TXT_FLN, "w");
+        printTable(r, composite, p_text, txtOut);
+        fclose(txtOut);
     }
     if (printBin) {
-        fileInit(p_binary);
-        printTable(r, composite, p_binary);
+        FILE* binOut = fopen(BIN_FLN, "wb");
+        printTable(r, composite, p_binary, binOut);
+        fclose(binOut);
     }
 
     destroyPidFdDsc(r);
