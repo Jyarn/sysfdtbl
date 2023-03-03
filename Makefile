@@ -18,7 +18,6 @@ vl: $(OUT)
 	valgrind --leak-check=full --track-origins=yes -s ./$(OUT) $(RARGS)
 
 test: $(OUT)
-	rm compositeTable.*
 	./test.sh
 
 %.o: %.c *.h

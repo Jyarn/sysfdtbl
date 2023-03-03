@@ -5,18 +5,19 @@
 
 typedef struct s_fdDsc {
 // file descriptor descriptor
-    char              fName[2048];
-    unsigned long int symNode;
-    unsigned long int phyNode;
-    unsigned int      fd;
+    char              fName[2048]; // filename
+    unsigned long int symNode;     // inode read by stat
+    unsigned long int phyNode;     // inode read by lstat
+    unsigned int      fd;          // file descriptor
 } fdDsc;
 
 typedef struct s_pidFdDsc {
+// process id file descriptor descriptor
 // group all fdDscs by pid and store their sizes
-    int                sz;
-    int                pid;
-    fdDsc*             fds;
-    struct s_pidFdDsc* next;
+    int                sz;      // size of fds
+    int                pid;     // the pid
+    fdDsc*             fds;     // array of file descriptor descriptors
+    struct s_pidFdDsc* next;    // next node
 } pidFdDsc;
 
 

@@ -12,6 +12,7 @@
 
 
 int getDirSz (DIR** dir) {
+// get dir size, dir is assumed to be valid
     int c = 0;
     struct dirent* d;
     while ( (d = readdir(*dir)) ) { c += isNum(d->d_name); }
@@ -19,7 +20,11 @@ int getDirSz (DIR** dir) {
     return c;
 }
 
-void fetchStats (char* path, fdDsc* ret) { // probably going to delete so code quality doesn't matter
+void fetchStats (char* path, fdDsc* ret) {
+/*
+ * fetch stats for a given file descriptor and 
+ * puts them in ret
+*/
     struct stat buf;
 
     stat(path, &buf);
@@ -34,15 +39,15 @@ void fetchStats (char* path, fdDsc* ret) { // probably going to delete so code q
 
 int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
 /*
- * Provide ability to process all or specific pids
- * frPidPathFtFdInfo = From Process Id Path fetch File Descriptor Info
- * assumes bff is valid and is the end of the list
+ * given a pidPath (/proc/[pid]/fd) loop through all file descriptors
+ * and allocate a space in bff, then fill in all information in bff
+ * 
+ * returns the size of bff, returns -1 if an error occured
 */
     int c = 0;
     errno = 0;
     DIR* pDir = opendir(pidPath); // process directory
     if (errno) {
-        //fprintf(stderr, "ERROR (%s): %s\n", pidPath, strerror(errno));
         return -1;
     }
 
@@ -69,8 +74,10 @@ int frPidPathFtFdInfo (char* pidPath, fdDsc** bff) {
 
 pidFdDsc* fetchAll (uid_t user, char printall) {
 /*
- * Main loop to be moved to main.c
- * Handle --threshold flag
+ * fetch all open file descriptors for the current user
+ * if printall != 0 fetch all the open file descriptors
+ * 
+ * returns a list pidFdDsc structs
 */
     DIR* proc = opendir("/proc");
     struct stat uCheck;
@@ -79,13 +86,15 @@ pidFdDsc* fetchAll (uid_t user, char printall) {
     pidFdDsc** write = &HEAD;
 
     for (struct dirent* d = readdir(proc); d; d = readdir(proc)) {
-        if (isNum(d->d_name)) { // uints are at most 20 chars
-            char path[2048]; // 6 + 20 + 3 = 29 < 32 so it probably hopefully won't overflow
+        if (isNum(d->d_name)) {
+            char path[2048];
             sprintf(path, "/proc/%s/", d->d_name);
-            stat(path, &uCheck);
+            stat(path, &uCheck); // check if directory belongs to user 
 
             if (printall || uCheck.st_uid == user) {
                 strncat(path, "fd/", 2048-strlen(path));
+                
+                // handle the linked list
                 *write = malloc(sizeof(pidFdDsc) );
                 (*write)->fds = NULL;
                 (*write)->sz = frPidPathFtFdInfo(path, &(*write)->fds );
@@ -101,6 +110,12 @@ pidFdDsc* fetchAll (uid_t user, char printall) {
 }
 
 pidFdDsc* fetchSingle (int pid) {
+/*
+ * fetch open file descriptors for a given pid
+ * the pid is not checked if it is acessible
+ * but if the pid <= 0, pid is set to the
+ * current processes pid
+*/
     if (pid <= 0) {
         pid = getpid();
     }
@@ -115,6 +130,9 @@ pidFdDsc* fetchSingle (int pid) {
 }
 
 void destroyPidFdDsc (pidFdDsc* target) {
+/*
+ * recursivley alloc'd memory
+*/
     if (target != NULL) {
         free(target->fds);
         destroyPidFdDsc(target->next);

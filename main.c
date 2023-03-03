@@ -17,6 +17,17 @@
 
 
 void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
+/*
+ * print the table
+ * what to print is specified by the PRINT_* macros, and is formatted and printed to
+ * stream
+ * 
+ * flags is taken in as a bitmask
+ * 
+ * for example PRINT_INODES | PRINT_FLNAME prints the inodes and filename
+ *             PRINT_PROCID                prints the process id  
+*/
+
     if (flags == 0) { return; }
 
     int titleBarLen = 0;
@@ -55,6 +66,15 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
 }
 
 void printThresh (FILE* stream, printMode outputMode, pidFdDsc* in, int threshold) {
+/*
+ * print threshold
+ * prints and handles the threshold of all the file descriptors in (pidFdDsc* in) based on threshold
+ * 
+ * stream     - file to print to
+ * outputMode - mode to print in
+ * in         - list of file descriptors
+ * threshold  - threshold
+*/
     int c = 0;
 
     printOut(stream, outputMode, "## Offending processes:");
@@ -72,6 +92,9 @@ void printThresh (FILE* stream, printMode outputMode, pidFdDsc* in, int threshol
 
 
 int main (int argc, char** argv) {
+/*
+ * Command processing
+*/
     int qHead = 0;
     char tableQueue[(argc == 1) ? 1 : (argc-1)];
 
