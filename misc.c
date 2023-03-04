@@ -1,7 +1,3 @@
-#include "misc.h"
-
-
-
 int isNum (char* chk) {
     /*
     * Check if chk is a number
