@@ -24,4 +24,5 @@ test: $(OUT)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
+	rm compositeTable.*
 	rm $(OBJ) $(OUT)

@@ -16,16 +16,16 @@
 
 
 
-void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
+void printTable (pidFdDesc* in, char flags, printMode outputMode, FILE* stream) {
 /*
  * print the table
  * what to print is specified by the PRINT_* macros, and is formatted and printed to
  * stream
- * 
+ *
  * flags is taken in as a bitmask
- * 
+ *
  * for example PRINT_INODES | PRINT_FLNAME prints the inodes and filename
- *             PRINT_PROCID                prints the process id  
+ *             PRINT_PROCID                prints the process id
 */
 
     if (flags == 0) { return; }
@@ -50,7 +50,7 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
 
                 if (flags & PRINT_PROCID) { printOut(stream, outputMode, "%-10d", in->pid); }
                 if (flags & PRINT_FLDESC) { printOut(stream, outputMode, "%-20d", in->fds[i].fd); }
-                if (flags & PRINT_INODES) { printOut(stream, outputMode, "%-20ld", in->fds[i].symNode); }
+                if (flags & PRINT_INODES) { printOut(stream, outputMode, "%-20ld", in->fds[i].phyNode); }
                 if (flags & PRINT_FLNAME) { printOut(stream, outputMode, "%-50s", in->fds[i].fName); }
                 line++;
             }
@@ -65,11 +65,11 @@ void printTable (pidFdDsc* in, char flags, printMode outputMode, FILE* stream) {
     printOut(stream, outputMode, "\n\n");
 }
 
-void printThresh (FILE* stream, printMode outputMode, pidFdDsc* in, int threshold) {
+void printThresh (FILE* stream, printMode outputMode, pidFdDesc* in, int threshold) {
 /*
  * print threshold
- * prints and handles the threshold of all the file descriptors in (pidFdDsc* in) based on threshold
- * 
+ * prints and handles the threshold of all the file descriptors in (pidFdDesc* in) based on threshold
+ *
  * stream     - file to print to
  * outputMode - mode to print in
  * in         - list of file descriptors
@@ -149,19 +149,19 @@ int main (int argc, char** argv) {
     }
     else if (!strcmp(argv[argc-1], "self")) {
         printUsr = 0;
-        pid = -1;
+        pid = 0;
     }
 
-    pidFdDsc* r = NULL;
+    pidFdDesc* r = NULL;
     if (printUsr) {
         struct passwd* p = getpwuid(geteuid() );
         printOut(stdout, p_stdout, " >>> TARGETING USER: %s\n", p->pw_name);
-        r = fetchAll(geteuid(), 0);
+        r = fetchAll(geteuid());
     }
     else {
-        if (pid  <= 0) { printOut(stdout, p_stdout, " >>> TARGETING SELF\n"); }
+        if (pid <= 0) { printOut(stdout, p_stdout, " >>> TARGETING SELF\n"); }
         else { printOut(stdout, p_stdout, " >>> TARGETING PID: %d\n", pid);}
-        r = fetchSingle(pid);
+        r = fetchSingle(getpid() );
     }
 
     int a = qHead ? qHead : 1;
@@ -185,5 +185,5 @@ int main (int argc, char** argv) {
         fclose(binOut);
     }
 
-    destroyPidFdDsc(r);
+    destroyPidFdDesc(r);
 }

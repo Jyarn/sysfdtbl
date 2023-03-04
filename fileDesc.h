@@ -3,26 +3,25 @@
 
 #include <sys/types.h>
 
-typedef struct s_fdDsc {
+typedef struct s_fdDesc {
 // file descriptor descriptor
     char              fName[2048]; // filename
-    unsigned long int symNode;     // inode read by stat
-    unsigned long int phyNode;     // inode read by lstat
+    unsigned long int phyNode;     // inode read by stat
     unsigned int      fd;          // file descriptor
-} fdDsc;
+} fdDesc;
 
-typedef struct s_pidFdDsc {
+typedef struct s_pidFdDesc {
 // process id file descriptor descriptor
-// group all fdDscs by pid and store their sizes
+// group all fdDescs by pid and store their sizes
     int                sz;      // size of fds
     int                pid;     // the pid
-    fdDsc*             fds;     // array of file descriptor descriptors
-    struct s_pidFdDsc* next;    // next node
-} pidFdDsc;
+    fdDesc*             fds;     // array of file descriptor descriptors
+    struct s_pidFdDesc* next;    // next node
+} pidFdDesc;
 
 
-pidFdDsc* fetchAll (uid_t user, char printall);
-pidFdDsc* fetchSingle (int pid);
-void destroyPidFdDsc (pidFdDsc* target);
+pidFdDesc* fetchAll (uid_t user);
+pidFdDesc* fetchSingle (int pid);
+void destroyPidFdDesc (pidFdDesc* target);
 
 #endif
