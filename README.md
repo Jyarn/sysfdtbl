@@ -4,10 +4,15 @@
 `make gdb` - run program as above but in gdb\
 `make vl`  - run program like in `make run` but through valgrind\
 `make clean` - deletes all generated .o files, the executable and the compositeTable table if they exist\
-see documentation for main for accepted arguments\
+see documentation for main (in Design/main) for accepted arguments\
 \
 Default behaviour is ./sysfdtl.out --composite\
-`-std=gnuc99` was used because the compiler kept complaining about undefined references to stat\
+`-std=gnuc99` was used because the compiler kept complaining about undefined references to stat
+
+# Changes
+I made a few aesthetic changes to the assignment:\
+I swapped the Inode and Filename columns in the table, so the output looked cleaner (if the filename was too long it messed up the Inode columns)\
+I also add a " >>> Targeting ..." in the output
 
 # Files
 
@@ -19,7 +24,7 @@ Default behaviour is ./sysfdtl.out --composite\
 
 # Design
 ### fileDesc.*
-Information of each file descriptor processed is put into a fdDesc struct which contains its filename, its inode read by stat, and its file descriptor. An array of fdDesc structs are kept in a pidFdDesc, which groups all the file descriptors by their PID. It also keeps track of the number of file descriptors, its PID, and the next node in the list of pidFdDesc structs
+Information for each file descriptor processed is put into a fdDesc struct which contains its filename, its inode read by stat, and its file descriptor. An array of fdDesc structs are kept in a pidFdDesc, which groups all the file descriptors by their PID. It also keeps track of the number of file descriptors, its PID, and the next node in the list of pidFdDesc structs
 File descriptors are processed something like this:
 ~~~
 // If we want fetch all file descriptors for a user
@@ -41,13 +46,14 @@ return CAD
 And `fetchSingle` calls `frPidPathFtFdInfo` and returns a piFdDesc\
 `fetchStats` fetches the stats of a given file descriptor and writes it into bff using stat and readlink\
 \
-readlink to fetch the filename, which was in the man proc documentation\
+readlink is used to fetch the filename, like it said in the man proc documentation\
 stat was used to fetch the inodes even though it doesn't match the output of `ls -li /proc/[pid]/fd/ -`. I assumed that `ls -li` used lstat rather than stat because it doesn't match the inode given by `readlink` (the inode in `type:[inode]`)
 
 ### IO.*
 
 Wraps printf, fprintf, and fwrite into a variadic function\
-A variadic function was since it lets specify a variable number of arguments, which was needed if I wanted to wrap encapsulate `printf`, `fprintf`, and `fwrite` together. My main reference for implementing this was https://www.youtube.com/watch?v=S-ak715zIIE. around 3m:00s, and he says that this is how all `printf` implementations implement `printf`. So I decided to call `vfprintf` to print in ascii mode\
+A variadic function was used since it lets me specify a variable number of arguments, which was needed if I wanted to wrap encapsulate `printf`, `fprintf`, and `fwrite` together. My main reference for implementing this was https://www.youtube.com/watch?v=S-ak715zIIE.\
+Around 3m:00s, he says that this is how all `printf` implementations implement `printf`. So I decided to call `vfprintf` to print in ascii mode\
 Binary mode, calls `vsprintf` to process the string, and then calls `fwrite` to print\
 What mode to print in is specified by the `printMode` enum
 
@@ -65,9 +71,9 @@ and 1 positional argument assumed to be at the start (argv[1]). If argv[1] == "s
 \
 Tables are printed in the order they are presented in the command line arguments and duplicated are allowed, so:\
 ./sysfdtbl.out --systemWide --composite --systemWide, prints the systemWide, composite, and systemWide tables in that order\
-What tables are printed and when is handled by a queue that stores everything in the order they were in when passed to the command line. If the queue is empty (qHead == 0), then this means no tables were specified so just prints the composite table\
+What tables are printed and when is handled by a queue that stores everything in the order they were in when passed to the command line. If the queue is empty (qHead == 0), then this means no tables were specified so it just prints the composite table\
 \
-`printTable` and `printThresh`, print the table and threshold respectivley. `printTable` takes a series of flags (in a bitmask). Possible flags are: PRINT_INODES, PRINT_FLNAME, PRINT_FLDESC, PRINT_PROCID, PRINT_LNNUMS.`printTable` is implemented so that it is able to print many different table types. Not using a bitmask would make the argument list extremely long and harder to read, so this is why a bitmask was used. `printThresh` loops through the list of pidFdDesc, reads the size, and prints it if its size. Every 10 PIDs a newline is started\
+`printTable` and `printThresh`, print the table and threshold respectivley. `printTable` takes a series of flags (in a bitmask). Possible flags are: PRINT_INODES, PRINT_FLNAME, PRINT_FLDESC, PRINT_PROCID, PRINT_LNNUMS. `printTable` is implemented so that it is able to print many different table types. Not using a bitmask would make the argument list extremely long and hard to read, so this is why a bitmask was used. `printThresh` loops through the list of pidFdDesc, reads the size, and prints it if its size is strictly larger than threshold. Every 10 PIDs a newline is started
 
 
 # Bonus
@@ -86,7 +92,7 @@ What tables are printed and when is handled by a queue that stores everything in
 |   10      |   0.023s  |   0.021s  |
 |  Average  |  0.0227s  |  0.0217s  |
 
-The benchmarks for binary, and ascii only seem to be off by 0.001s. The similar times could because I use glibc (vsprintf) to process the format string, which could be also what vfprintf does.\
+The benchmarks for binary, and ascii seem to be off by 0.001s. The similar times could because I use glibc (vsprintf) to process the format string and then call fwrite, which could be also what vfprintf does.
 
 # Functions
 
@@ -120,7 +126,7 @@ if mode == p_binary use vsprintf to process the string and print to the file usi
 txtOut - File to print to (assumed to be opened in the correct mode and already opened/valid)\
 mode   - Specifies mode to print as (p_stdout is mostly redundant but was kept to not break things)\
 format - format string (see printf docs)\
-...    - see printf docs    \
+...    - see printf docs
 
 #### main.c
 `void printThresh (FILE* stream, printMode outputMode, pidFdDesc* in, int threshold)`\

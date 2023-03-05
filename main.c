@@ -86,7 +86,7 @@ void printThresh (FILE* stream, printMode outputMode, pidFdDesc* in, int thresho
 */
     int c = 0;
 
-    printOut(stream, outputMode, "## Offending processes:");
+    printOut(stream, outputMode, "## Offending processes -- #FD threshold=%d", threshold);
     while (in) {
         if (in->sz != -1 && in->sz > threshold) {
             if (c % 10 == 0) { printOut(stream, outputMode, "\n"); }
@@ -97,6 +97,8 @@ void printThresh (FILE* stream, printMode outputMode, pidFdDesc* in, int thresho
 
         in = in->next;
     }
+
+    printOut(stream, outputMode, "\n");
 }
 
 
@@ -111,11 +113,13 @@ int main (int argc, char** argv) {
     // to store our default arguments
     char tableQueue[(argc == 1) ? 1 : (argc-1)];
 
+    // define what to print for each table
     const char composite = PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME | PRINT_INODES;
     const char sysWide   = PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME;
-    const char vnodes    = PRINT_PROCID | PRINT_FLDESC | PRINT_INODES;
+    const char vnodes    = PRINT_PROCID | PRINT_INODES;
     const char perProc   = PRINT_PROCID | PRINT_FLDESC;
 
+    // togglable flags
     char printThreshold = 0;
     int threshold = 0;
     char printUsr = PRINT_LNNUMS;
@@ -157,6 +161,7 @@ int main (int argc, char** argv) {
         }
     }
 
+    // process positional argument at argv[1]
     if (argc > 1) {
         if (isNum(argv[1]) || (argv[1][0] == '-' && isNum(&argv[1][1]))) {
             printUsr = 0;
@@ -169,16 +174,18 @@ int main (int argc, char** argv) {
     }
 
     // fetches data about the FDs based on the positional argument
-    pidFdDesc* r = NULL;
-    if (printUsr) {
+    pidFdDesc* tableData = NULL;
+    pidFdDesc* fdData = fetchAll(geteuid() );
+
+    if (printUsr) { // run if no valid positional argument is specified
         struct passwd* p = getpwuid(geteuid() );
         printOut(stdout, p_stdout, " >>> TARGETING USER: %s\n", p->pw_name);
-        r = fetchAll(geteuid());
+        tableData = fetchAll(geteuid());
     }
-    else {
+    else { // valid positional argument specified (if pid <= 0, target current process)
         if (pid <= 0) { printOut(stdout, p_stdout, " >>> TARGETING SELF\n"); }
         else { printOut(stdout, p_stdout, " >>> TARGETING PID: %d\n", pid);}
-        r = fetchSingle(pid <= 0 ? getpid() : pid);
+        tableData = fetchSingle(pid <= 0 ? getpid() : pid);
     }
 
     // if qHead == 0 set nTables equal to 1 (the length of our default arguments)
@@ -186,24 +193,25 @@ int main (int argc, char** argv) {
     // if qHead != 0 set nTables equal to qHead (the number of arguments the length of our queue)
     int nTables = qHead ? qHead : 1;
     for (int i = 0; i < nTables; i++) {
-        printTable(r, tableQueue[i] | printUsr, p_stdout, stdout);
+        printTable(tableData, tableQueue[i] | printUsr, p_stdout, stdout);
     }
 
     if (printThreshold) {
-        printThresh(stdout, p_stdout, r, threshold);
+        printThresh(stdout, p_stdout, fdData, threshold);
     }
     else { printOut(stdout, p_stdout, "No Threshold\n"); }
 
     if (printTxt) {
         FILE* txtOut = fopen(TXT_FLN, "w");
-        printTable(r, composite, p_text, txtOut);
+        printTable(fdData, composite, p_text, txtOut);
         fclose(txtOut);
     }
     if (printBin) {
         FILE* binOut = fopen(BIN_FLN, "wb");
-        printTable(r, composite, p_binary, binOut);
+        printTable(fdData, composite, p_binary, binOut);
         fclose(binOut);
     }
 
-    destroyPidFdDesc(r);
+    destroyPidFdDesc(fdData);
+    destroyPidFdDesc(tableData);
 }
