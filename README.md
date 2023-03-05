@@ -138,3 +138,8 @@ flags is taken in as a bitmask\
 for example:\
 PRINT_INODES | PRINT_FLNAME prints the inodes and filename\
 PRINT_PROCID                prints the process id
+
+#### misc
+`int isNum (char* chk)`\
+Check if chk is a number\
+chk("70") == 1; chk("70sdsfd") == false; chk("slkdf98") == 0
