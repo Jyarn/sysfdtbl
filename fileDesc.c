@@ -91,7 +91,7 @@ pidFdDesc* fetchAll (uid_t user) {
             if (uCheck.st_uid == user) {
                 strncat(path, "fd/", 2048-strlen(path));
 
-                // handle the linked list
+                // attach to tail of linked list
                 *write = malloc(sizeof(pidFdDesc) );
                 (*write)->fds = NULL;
                 (*write)->sz = frPidPathFtFdInfo(path, &(*write)->fds );

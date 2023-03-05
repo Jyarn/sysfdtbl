@@ -13,8 +13,8 @@ typedef struct s_fdDesc {
 typedef struct s_pidFdDesc {
 // process id file descriptor descriptor
 // group all fdDescs by pid and store their sizes
-    int                sz;      // size of fds
-    int                pid;     // the pid
+    int                 sz;      // size of fds
+    int                 pid;     // the pid
     fdDesc*             fds;     // array of file descriptor descriptors
     struct s_pidFdDesc* next;    // next node
 } pidFdDesc;

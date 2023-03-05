@@ -111,6 +111,7 @@ int main (int argc, char** argv) {
     char printTxt = 0;
     char printBin = 0;
 
+    // specify default behaviour will be overwritten and not read if other tables are specified
     tableQueue[0] = composite;
 
     for (int i = 1; i < argc; i++) {
@@ -120,7 +121,6 @@ int main (int argc, char** argv) {
         else if ( !strcmp(argv[i], "--composite")) { tableQueue[qHead++] = composite; }
         else if ( !strcmp(argv[i], "--output_TXT")) { printTxt = 1; }
         else if ( !strcmp(argv[i], "--output_binary")) { printBin = 1; }
-        else if ( !strcmp(argv[i], "--notbl")) { qHead = -1; }
 
         else if ( !strncmp(argv[i], "--threshold", 11)) {
             int off = 11;
@@ -143,13 +143,15 @@ int main (int argc, char** argv) {
         }
     }
 
-    if (isNum(argv[argc-1]) || (argv[argc-1][0] == '-' && isNum(&argv[argc-1][1]))) {
-        printUsr = 0;
-        pid = strtol(argv[argc-1], NULL, 10);
-    }
-    else if (!strcmp(argv[argc-1], "self")) {
-        printUsr = 0;
-        pid = 0;
+    if (argc > 1) {
+        if (isNum(argv[1]) || (argv[1][0] == '-' && isNum(&argv[1][1]))) {
+            printUsr = 0;
+            pid = strtol(argv[1], NULL, 10);
+        }
+        else if (!strcmp(argv[1], "self")) {
+            printUsr = 0;
+            pid = 0;
+        }
     }
 
     pidFdDesc* r = NULL;
@@ -161,7 +163,7 @@ int main (int argc, char** argv) {
     else {
         if (pid <= 0) { printOut(stdout, p_stdout, " >>> TARGETING SELF\n"); }
         else { printOut(stdout, p_stdout, " >>> TARGETING PID: %d\n", pid);}
-        r = fetchSingle(getpid() );
+        r = fetchSingle(pid <= 0 ? getpid() : pid);
     }
 
     int a = qHead ? qHead : 1;

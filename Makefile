@@ -17,12 +17,10 @@ gdb: $(OUT)
 vl: $(OUT)
 	valgrind --leak-check=full --track-origins=yes -s ./$(OUT) $(RARGS)
 
-test: $(OUT)
-	./test.sh
-
 %.o: %.c *.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
+.PHONY: clean
 clean:
-	rm compositeTable.*
 	rm $(OBJ) $(OUT)
+	rm compositeTable.*
