@@ -4,6 +4,7 @@
 `make gdb` - run program as above but in gdb\
 `make vl`  - run program like in `make run` but through valgrind\
 `make clean` - deletes all generated .o files, the executable and the compositeTable table if they exist\
+see documentation for main for accepted arguments\
 \
 Default behaviour is ./sysfdtl.out --composite\
 `-std=gnuc99` was used because the compiler kept complaining about undefined references to stat\
@@ -59,6 +60,7 @@ Processes the command line arguments and is implements the main program logic. A
 `--composite`\
 `--output_TXT`\
 `--output_binary`\
+`--threshold=x`, `--thresholdx`, `threshold x`, where x is the threshold\
 and 1 positional argument assumed to be at the start (argv[1]). If argv[1] == "self" or atoi(argv[1]) <= 0 then the current PID is targeted instead. If argv[1] is not a number then all PIDs for the current user are targeted instead\
 \
 Tables are printed in the order they are presented in the command line arguments and duplicated are allowed, so:\
