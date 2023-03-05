@@ -54,9 +54,9 @@ int frPidPathFtFdInfo (char* pidPath, fdDesc** bff) {
 
     for (struct dirent* f = readdir(pDir); f; f = readdir(pDir)) {
         if (isNum(f->d_name)) { // remove . / .. files
-            char fdPath[4096]; // same here
-            strcpy(fdPath, pidPath); // fdPath > path so no overflow probably
-            strcat(fdPath, f->d_name); // 29 + 20 = 49 < 64
+            char fdPath[4096];
+            strcpy(fdPath, pidPath);
+            strcat(fdPath, f->d_name);
 
             fetchStats(fdPath, (*bff+c));
             (*bff+c)->fd = strtol(f->d_name, NULL, 10);
@@ -86,8 +86,9 @@ pidFdDesc* fetchAll (uid_t user) {
         if (isNum(d->d_name)) {
             char path[2048];
             sprintf(path, "/proc/%s/", d->d_name);
-            stat(path, &uCheck); // check if directory belongs to user
+            stat(path, &uCheck);
 
+            // check if directory belongs to user
             if (uCheck.st_uid == user) {
                 strncat(path, "fd/", 2048-strlen(path));
 

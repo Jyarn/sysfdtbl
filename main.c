@@ -32,12 +32,16 @@ void printTable (pidFdDesc* in, char flags, printMode outputMode, FILE* stream) 
 
     int titleBarLen = 0;
     printOut(stream, outputMode, "%-10s", " ");
+
+    // print header
     if (flags & PRINT_PROCID) { titleBarLen += printOut(stream, outputMode, "%-10s", "PID"); }
     if (flags & PRINT_FLDESC) { titleBarLen += printOut(stream, outputMode, "%-20s", "FD"); }
     if (flags & PRINT_INODES) { titleBarLen += printOut(stream, outputMode, "%-20s", "Inode"); }
     if (flags & PRINT_FLNAME) { titleBarLen += printOut(stream, outputMode, "%-50s", "Filename"); }
 
     printOut(stream, outputMode, "\n%8c", ' ');
+
+    // print "====" line based on length of header
     for (int i = 8; i < titleBarLen+10; i++) { printOut(stream, outputMode, "="); }
     int line = 1;
 
@@ -45,9 +49,12 @@ void printTable (pidFdDesc* in, char flags, printMode outputMode, FILE* stream) 
         if (in->sz != -1) {
             for (int i = 0; i < in->sz; i++) {
                 printOut(stream, outputMode, "\n");
+
+                // print line numbers and justify left by 10 characters
                 if (flags & PRINT_LNNUMS) { printOut(stream, outputMode, "%-10d", line); }
                 else { printOut(stream, outputMode, "%10s", " "); }
 
+                // print table entries
                 if (flags & PRINT_PROCID) { printOut(stream, outputMode, "%-10d", in->pid); }
                 if (flags & PRINT_FLDESC) { printOut(stream, outputMode, "%-20d", in->fds[i].fd); }
                 if (flags & PRINT_INODES) { printOut(stream, outputMode, "%-20ld", in->fds[i].phyNode); }
@@ -61,6 +68,8 @@ void printTable (pidFdDesc* in, char flags, printMode outputMode, FILE* stream) 
     }
 
     printOut(stream, outputMode, "\n%8c", ' ');
+
+    // print "====" line based on length of header
     for (int i = 8; i < titleBarLen+10; i++) { printOut(stream, outputMode, "="); }
     printOut(stream, outputMode, "\n\n");
 }
@@ -95,7 +104,11 @@ int main (int argc, char** argv) {
 /*
  * Command processing
 */
-    int qHead = 0;
+
+    // our queue
+    int qHead = 0; // queue index
+    // create a queue long enough to store our command args, if argc == 1 create a queue of size 1,
+    // to store our default arguments
     char tableQueue[(argc == 1) ? 1 : (argc-1)];
 
     const char composite = PRINT_PROCID | PRINT_FLDESC | PRINT_FLNAME | PRINT_INODES;
@@ -114,6 +127,7 @@ int main (int argc, char** argv) {
     // specify default behaviour will be overwritten and not read if other tables are specified
     tableQueue[0] = composite;
 
+    // tableQueue[qHead++] = ... writes to our queue and increments the index
     for (int i = 1; i < argc; i++) {
         if ( !strcmp(argv[i], "--per-process")) { tableQueue[qHead++] = perProc; }
         else if ( !strcmp(argv[i], "--systemWide")) { tableQueue[qHead++] = sysWide; }
@@ -154,6 +168,7 @@ int main (int argc, char** argv) {
         }
     }
 
+    // fetches data about the FDs based on the positional argument
     pidFdDesc* r = NULL;
     if (printUsr) {
         struct passwd* p = getpwuid(geteuid() );
@@ -166,8 +181,11 @@ int main (int argc, char** argv) {
         r = fetchSingle(pid <= 0 ? getpid() : pid);
     }
 
-    int a = qHead ? qHead : 1;
-    for (int i = 0; i < a; i++) {
+    // if qHead == 0 set nTables equal to 1 (the length of our default arguments)
+    // and print the default arguments
+    // if qHead != 0 set nTables equal to qHead (the number of arguments the length of our queue)
+    int nTables = qHead ? qHead : 1;
+    for (int i = 0; i < nTables; i++) {
         printTable(r, tableQueue[i] | printUsr, p_stdout, stdout);
     }
 

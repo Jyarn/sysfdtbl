@@ -84,4 +84,57 @@ What tables are printed and when is handled by a queue that stores everything in
 |   10      |   0.023s  |   0.021s  |
 |  Average  |  0.0227s  |  0.0217s  |
 
-The benchmarks for binary, and ascii only seem to be off by 0.001s. The similar times could because I use glibc (vsprintf) to process the format string, which could be also what vfprintf does.
+The benchmarks for binary, and ascii only seem to be off by 0.001s. The similar times could because I use glibc (vsprintf) to process the format string, which could be also what vfprintf does.\
+
+# Functions
+
+#### fileDesc
+`int getDirSz (DIR** dir)`\
+ get dir size, dir is assumed to be valid\
+
+`void fetchStats (char* path, fdDesc* ret)`\
+ fetch stats for a given file descriptor and puts them in ret\
+
+`int frPidPathFtFdInfo (char* pidPath, fdDesc** bff)`\
+ given a pidPath (/proc/[pid]/fd) loop through all file descriptors and allocate a space in bff, then fill in all information in bff returns the size of bff, returns -1 if an error occured
+
+`pidFdDesc* fetchAll (uid_t user)`\
+fetch all open file descriptors for the current user if printall != 0 fetch all the open file descriptors returns a list pidFdDesc structs\
+
+`pidFdDesc* fetchSingle (int pid)`\
+fetch open file descriptors for a given pid the pid is not checked if it is acessible but if the pid <= 0, pid is set to the current processes pid\
+
+`void destroyPidFdDesc (pidFdDesc* target)`\
+recursivley free alloc'd memory
+
+#### IO
+`int printOut(FILE* txtOut, printMode mode, const char* format, ...)`\
+print to the indicate FILE* pointed to by txtOut, using the mode (binary or ascii)\
+printOut uses variadic functions to wrap printf and fwrite together\
+\
+if mode == p_stdout or mode == p_text print to the txtOut, using vfprintf (basically printf)\
+if mode == p_binary use vsprintf to process the string and print to the file using fwrite\
+\
+txtOut - File to print to (assumed to be opened in the correct mode and already opened/valid)\
+mode   - Specifies mode to print as (p_stdout is mostly redundant but was kept to not break things)\
+format - format string (see printf docs)\
+...    - see printf docs    \
+
+#### main.c
+`void printThresh (FILE* stream, printMode outputMode, pidFdDesc* in, int threshold)`\
+print threshold\
+prints and handles the threshold of all the file descriptors in (pidFdDesc* in) based on threshold\
+\
+stream     - file to print to\
+outputMode - mode to print in\
+in         - list of file descriptors\
+threshold  - threshold\
+
+print the table\
+what to print is specified by the PRINT_* macros, and is formatted and printed to stream\
+\
+flags is taken in as a bitmask\
+\
+for example:\
+PRINT_INODES | PRINT_FLNAME prints the inodes and filename\
+PRINT_PROCID                prints the process id
